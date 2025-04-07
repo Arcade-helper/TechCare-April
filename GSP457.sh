@@ -52,6 +52,8 @@ gcloud healthcare fhir-stores export bq $FHIR_STORE_ID \
 --bq-dataset=bq://$PROJECT_ID.$DATASET_ID \
 --schema-type=analytics
 
+echo "${YELLOW}${BOLD}NOW${RESET}" "${WHITE}${BOLD}FOLLOW${RESET}" "${GREEN}${BOLD}VIDEO'S INSTRUCTIONS${RESET}"
+
 sleep 210
 
 gcloud healthcare fhir-stores export bq de_id \
