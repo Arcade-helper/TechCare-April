@@ -1,34 +1,65 @@
-export PROJECT_ID=$(gcloud config get-value project)
+gcloud auth list
 
-export PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} \
-    --format="value(projectNumber)")
+export ZONE=$(gcloud compute project-info describe --format="value(commonInstanceMetadata.items[google-compute-default-zone])")
 
-export ZONE=$(gcloud compute project-info describe \
---format="value(commonInstanceMetadata.items[google-compute-default-zone])")
+export REGION=$(gcloud compute project-info describe --format="value(commonInstanceMetadata.items[google-compute-default-region])")
 
-export REGION=$(gcloud compute project-info describe \
---format="value(commonInstanceMetadata.items[google-compute-default-region])")
+
+PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
 
 gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
-    --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com \
-    --role=roles/storage.admin
+    --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --role="roles/storage.admin"
 
-gcloud dataproc clusters create qlab \
-    --enable-component-gateway \
-    --region $REGION \
-    --zone $ZONE \
-    --master-machine-type e2-standard-4 \
-    --master-boot-disk-type pd-balanced \
-    --master-boot-disk-size 100 \
+sleep 60
+
+#!/bin/bash
+
+echo "$CLUSTER_NAME"
+echo "$ZONE"
+echo "$REGION"
+
+cluster_function() {
+  gcloud dataproc clusters create "$CLUSTER_NAME" \
+    --region "$REGION" \
+    --zone "$ZONE" \
+    --master-machine-type n1-standard-2 \
+    --worker-machine-type n1-standard-2 \
     --num-workers 2 \
-    --worker-machine-type e2-standard-2 \
     --worker-boot-disk-size 100 \
-    --image-version 2.2-debian12 \
-    --project $DEVSHELL_PROJECT_ID
+    --worker-boot-disk-type pd-standard \
+    --no-address
+}
+
+cp_success=false
+
+while [ "$cp_success" = false ]; do
+  cluster_function
+  exit_status=$?
+
+  if [ "$exit_status" -eq 0 ]; then
+    echo ""
+    cp_success=true
+  else
+    echo ""
+
+    if gcloud dataproc clusters describe "$CLUSTER_NAME" --region "$REGION" &>/dev/null; then
+      echo ""
+      gcloud dataproc clusters delete "$CLUSTER_NAME" --region "$REGION" --quiet
+      echo "Cluster deleted. Retrying in 10 seconds..."
+    else
+      echo ""
+    fi
+    echo ""
+    sleep 10
+  fi
+done
+
 
 gcloud dataproc jobs submit spark \
-    --cluster qlab \
+    --project $DEVSHELL_PROJECT_ID \
     --region $REGION \
+    --cluster $CLUSTER_NAME \
     --class org.apache.spark.examples.SparkPi \
     --jars file:///usr/lib/spark/examples/jars/spark-examples.jar \
     -- 1000
