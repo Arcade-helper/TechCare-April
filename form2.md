@@ -6,12 +6,10 @@ export ZONE=
 ``` 
 ```
 curl -O https://raw.githubusercontent.com/Arcade-helper/TechCare-April/main/ARC119_Form2.sh
+
 chmod +x ARC119_Form2.sh
+
 ./ARC119_Form2.sh
-
-
-
-
 ```
 
 ### Congratulations 🎉 for Successfully Completing the Lab !
